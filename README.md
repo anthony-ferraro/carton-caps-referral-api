@@ -19,7 +19,7 @@ A .NET Core REST API service that powers the referral system for the Carton Caps
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/carton-caps-referral-api.git
+git clone https://github.com/anthony-ferraro/carton-caps-referral-api.git
 cd carton-caps-referral-api
 ```
 
