@@ -1,0 +1,198 @@
+openapi: 3.0.0
+info:
+  title: Carton Caps Referral API
+  version: '1.0'
+  description: |
+    API endpoints for the Carton Caps referral system.
+    Enables users to generate and manage referral links, track referral status,
+    and handle the referral validation process.
+
+servers:
+  - url: https://api.cartoncaps.com/v1
+    description: Production server
+  - url: https://api-staging.cartoncaps.com/v1
+    description: Staging server
+
+paths:
+  /referrals/my-code:
+    get:
+      summary: Get current user's referral code
+      description: Returns the user's unique referral code
+      operationId: getMyReferralCode
+      responses:
+        '200':
+          description: Referral code retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralCode'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /referrals/generate-link/{shareMethod}:
+    post:
+      summary: Generate a new referral link
+      description: Creates a new deferred deep link for sharing
+      operationId: generateReferralLink
+      parameters:
+        - name: shareMethod
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [text, email, share]
+            description: The method through which the link will be shared
+      responses:
+        '201':
+          description: Referral link generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateReferralLinkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /referrals/history:
+    get:
+      summary: Get referral history
+      description: Returns a list of the user's referrals and their statuses
+      operationId: getReferralHistory
+      responses:
+        '200':
+          description: Referral history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReferralHistory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /referrals/validate/{code}:
+    get:
+      summary: Validate referral code
+      description: Validates a referral code during new user onboarding.
+      operationId: validateReferralCode
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z0-9]{6}$'
+            example: "XY7G4D"
+      responses:
+        '200':
+          description: Referral code is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralValidation'
+        '404':
+          description: Referral code not found or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_code:
+                  value:
+                    code: "invalid_code"
+                    message: "The specified referral code was not found"
+
+components:
+  schemas:
+    ReferralCode:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Z0-9]{6}$'
+          example: "XY7G4D"
+      required:
+        - code
+
+    ReferralHistory:
+      type: object
+      description: A referral in the user's history
+      properties:
+        referredUserName:
+          type: string
+          description: Name of the referred user
+          example: "Jenny S."
+        status:
+          type: string
+          description: Current status of the referral
+          enum: [complete]
+      required:
+        - referredUserName
+        - status
+
+    ReferralValidation:
+      type: object
+      description: Validation result and onboarding information for a referral code
+      properties:
+        isValid:
+          type: boolean
+          description: Whether the referral code is valid
+        referrerSchool:
+          type: string
+          description: The school the referrer is supporting
+          example: "Lincoln Elementary"
+        onboardingFlow:
+          type: string
+          description: The type of onboarding flow to show
+          enum: [referred_user]
+          example: "referred_user"
+      required:
+        - isValid
+        - referrerSchool
+        - onboardingFlow
+
+    GenerateReferralLinkResponse:
+      type: object
+      description: A shareable deep link for the referral
+      properties:
+        referralLink:
+          type: string
+          format: uri
+          description: The deep link that can be shared with potential users
+          example: "https://cartoncaps.link/abfilefa90p?referral_code=XY7G4D"
+      required:
+        - referralLink
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Specific error code for the failure
+          enum:
+            - invalid_code
+            - invalid_share_method
+          example: "invalid_code"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The specified referral code was not found"
+      required:
+        - code
+        - message
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
